@@ -1,6 +1,25 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
+# ### Summary
+# 1. **Input Channels (3)**: Correspond to the three text fields.
+# 2. **Output Channels (16)**: Number of filters to extract diverse features.
+# 3. **Convolutional Layer**: Extracts features, maintaining sequence length.
+# 4. **Pooling Layer**: Reduces sequence length by half.
+# 5. **Flattening**: Converts 3D tensor to 2D tensor for fully connected layers.
+# 6. **Fully Connected Layers**: Process features and produce regression outputs.
+# 7. **Fully Connected Layers**: Process features, along with regression outputs and produces classification output.
+
+# Here’s the detailed transformation of the input data through the layers:
+
+# 1. **Input Embeddings**: Shape `(batch_size, 3, 768)`
+# 2. **After Convolution**: Shape `(batch_size, 16, 768)`
+# 3. **After Pooling**: Shape `(batch_size, 16, 384)`
+# 4. **After Flattening**: Shape `(batch_size, 16 * 384 = 6144)`
+# 5. **After Fully Connected Layer**: Shape `(batch_size, 50)`
+# 6. **Regression Outputs**: Two outputs of shape `(batch_size, 1)` for `PartCosts` and `LaborHours`.
+# 7. **Classification Output**: Output of shape `(batch_size, 1)` for `ClaimStatus`.
+
 class ClaimsModel(nn.Module):
     def __init__(self, num_structured_features):
         super(ClaimsModel, self).__init__()
