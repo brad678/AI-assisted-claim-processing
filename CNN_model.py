@@ -1,5 +1,8 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
 
 # ### Summary
 # 1. **Input Channels (3)**: Correspond to the three text fields.
@@ -64,8 +67,50 @@ structured_data = torch.tensor([[0.5, 1.2, 3.4]], dtype=torch.float32)  # Exampl
 num_structured_features = structured_data.shape[1]
 model = ClaimsModel(num_structured_features)
 
-# Apply the model
+# Define loss functions and optimizer
+criterion_regression = nn.MSELoss()
+criterion_classification = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+# Example training loop
+num_epochs = 20
+batch_size = 32
+
+# Example dataset
+embeddings = torch.rand((100, 3, 128))  # Example embeddings
+structured_data = torch.rand((100, num_structured_features))
+part_costs = torch.rand((100, 1))
+labor_hours = torch.rand((100, 1))
+labels = torch.randint(0, 2, (100,))
+
+dataset = TensorDataset(embeddings, structured_data, part_costs, labor_hours, labels)
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+for epoch in range(num_epochs):
+    for batch in dataloader:
+        x_embeddings, x_structured, y_part_costs, y_labor_hours, y_labels = batch
+        
+        optimizer.zero_grad()
+        
+        # Forward pass
+        part_costs_pred, labor_hours_pred, classification_output = model(x_embeddings, x_structured)
+        
+        # Compute loss
+        loss_regression = criterion_regression(part_costs_pred, y_part_costs) + criterion_regression(labor_hours_pred, y_labor_hours)
+        loss_classification = criterion_classification(classification_output, y_labels)
+        loss = loss_regression + loss_classification
+        
+        # Backward pass and optimization
+        loss.backward()
+        optimizer.step()
+    
+    print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+
+# Save the model
+torch.save(model.state_dict(), 'claims_model.pth')
+
+# Apply the model to new data
 part_costs_pred, labor_hours_pred, classification_output = model(embeddings, structured_data)
-print("Predicted Part Costs:", part_costs_pred.item())
-print("Predicted Labor Hours:", labor_hours_pred.item())
+print("Predicted Part Costs:", part_costs_pred)
+print("Predicted Labor Hours:", labor_hours_pred)
 print("Classification Output:", classification_output)
