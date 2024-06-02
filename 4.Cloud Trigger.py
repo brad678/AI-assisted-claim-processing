@@ -20,7 +20,7 @@ def trigger_dataflow(event, context):
             'inputFile': 'gs://claims_data_bucket/new_claim_data.csv',
             'outputTable': 'my-gcp-project:claims_output_data_bucket.processed_claims'
         },
-        'containerSpecGcsPath': 'gs://my-dataflow-templates/claims_processing'
+        'containerSpecGcsPath': 'gs://my_dataflow_templates/claims_processing'
     }
 
     # Trigger the Dataflow job
