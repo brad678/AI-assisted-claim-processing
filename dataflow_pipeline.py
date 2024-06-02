@@ -70,12 +70,12 @@ def run(argv=None):
     with beam.Pipeline(options=pipeline_options) as p:
         (
             p
-            | 'ReadClaimData' >> beam.io.ReadFromText('gs://bucket/claims-data.csv', skip_header_lines=1)
+            | 'ReadClaimData' >> beam.io.ReadFromText('gs://claims_data_bucket/new_claim_data.csv', skip_header_lines=1)
             | 'ParseCSV' >> beam.Map(lambda line: dict(zip(['ClaimID', 'VehicleID', 'ClaimDate', 'CasualCode', 'CustomerComplaint', 'TechnicianDiagnosis', 'RepairRecommendation'], line.split(','))))
             | 'ProcessClaims' >> beam.ParDo(ProcessClaims(bert_model_name='bert-base-uncased'))
             | 'PredictCostAndStatus' >> beam.ParDo(PredictCostAndStatus(project='my-gcp-project', model_name='claims_prediction_model', version_name='v1'))
             | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
-                'project_id:my_dataset.final_predictions',
+                'my-gcp-project:claims_output_data_bucket.processed_claims',
                 schema='ClaimID:STRING,VehicleID:STRING,ClaimDate:STRING,CasualCode:STRING,CustomerComplaint:STRING,TechnicianDiagnosis:STRING,RepairRecommendation:STRING,PartCosts:FLOAT64,LaborHours:FLOAT64,ClaimStatus:STRING',
                 write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND
             )
