@@ -1,4 +1,8 @@
 # Create a Dataflow template from the pipeline script
+
+# temp_location: Cloud Storage bucket location where temporary files will be stored during the execution of the Dataflow job.
+# staging_location: Cloud Storage bucket location where the job's executable files and other dependencies will be stored before the job starts.
+
 python dataflow_pipeline.py --runner DataflowRunner \
                    --project gcp-project-id \
                    --temp_location gs://claims-data-bucket/temp \
@@ -6,3 +10,4 @@ python dataflow_pipeline.py --runner DataflowRunner \
                    --template_location gs://my-dataflow-templates/claims_processing
 
 # This command generates a Dataflow template stored at gs://my-dataflow-templates/claims_processing.
+
