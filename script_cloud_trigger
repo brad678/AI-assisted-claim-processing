@@ -1,0 +1,5 @@
+gcloud functions deploy triggerDataflow \
+    --runtime python39 \
+    --trigger-resource claims-data-bucket \
+    --trigger-event google.storage.object.finalize \
+    --entry-point trigger_dataflow
