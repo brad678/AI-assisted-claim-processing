@@ -1,6 +1,6 @@
 # AI-assited-claim-processing
 
-# Claims Processing Pipeline with GCP
+## Claims Processing Pipeline with GCP
 
 This repository contains code for processing claims data using Google Cloud Functions and Apache Beam (Dataflow). The goal is to trigger a Dataflow job whenever a new claims file is uploaded to a specified Cloud Storage bucket. The Dataflow job performs data processing, feature extraction, and predictions using a pre-trained model.
 
