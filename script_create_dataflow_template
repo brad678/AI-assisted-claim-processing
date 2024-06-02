@@ -1,0 +1,8 @@
+# Create a Dataflow template from the pipeline script
+python dataflow_pipeline.py --runner DataflowRunner \
+                   --project gcp-project-id \
+                   --temp_location gs://bucket/temp \
+                   --staging_location gs://bucket/staging \
+                   --template_location gs://my-dataflow-templates/claims_processing
+
+# This command generates a Dataflow template stored at gs://my-dataflow-templates/claims_processing.
