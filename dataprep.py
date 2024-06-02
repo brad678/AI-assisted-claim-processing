@@ -62,4 +62,4 @@ features = torch.cat((normalized_structured_features,
 X = features.numpy()
 y_costs = data['PartCosts'].values
 y_hours = data['LaborHours'].values
-y_labels = data['ClaimApproved'].values
+y_labels = data['ClaimStatus'].values
