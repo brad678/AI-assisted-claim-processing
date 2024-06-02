@@ -10,14 +10,14 @@ def trigger_dataflow(event, context):
     job = {
         'jobName': 'process-claims',
         'environment': {
-            'tempLocation': 'gs://your-temp-bucket/temp/',
+            'tempLocation': 'gs://bucket/temp/',
             'zone': 'us-central1-f'
         },
         'parameters': {
-            'inputFile': 'gs://your-bucket-name/{}'.format(event['name']),
+            'inputFile': 'gs://bucket/new_claim_data.csv',
             'outputTable': 'your_project_id:your_dataset.your_table'
         },
-        'containerSpecGcsPath': 'gs://your-bucket-name/templates/your-template.json'
+        'containerSpecGcsPath': 'gs://my-dataflow-templates/claims_processing'
     }
 
     # Trigger the Dataflow job
