@@ -4,10 +4,10 @@
 # staging_location: Cloud Storage bucket location where the job's executable files and other dependencies will be stored before the job starts.
 
 python dataflow_pipeline.py --runner DataflowRunner \
-                   --project gcp-project-id \
-                   --temp_location gs://claims-data-bucket/temp \
-                   --staging_location gs://claims-data-bucket/staging \
-                   --template_location gs://my-dataflow-templates/claims_processing
+                   --project my-gcp-project \
+                   --temp_location gs://claims_data_bucket/temp \
+                   --staging_location gs://claims_data_bucket/staging \
+                   --template_location gs://my_dataflow_templates/claims_processing
 
-# This command generates a Dataflow template stored at gs://my-dataflow-templates/claims_processing.
+# This command generates a Dataflow template stored at gs://my_dataflow_templates/claims_processing.
 
