@@ -48,7 +48,7 @@ class PredictCostAndStatus(beam.DoFn):
     def process(self, element):
         # Prepare the input for prediction
         input_data = {'instances': [element]}
-        parent = f'projects/{self.project}/models/{self.model_name}/versions/{self.version_name}'
+        parent = f'projects/my-gcp-project/models/claims_prediction_model/versions/v1'
 
         # Call AI Platform Prediction
         request = self.prediction_client.projects().predict(name=parent, body=input_data)
@@ -73,9 +73,9 @@ def run(argv=None):
             | 'ReadClaimData' >> beam.io.ReadFromText('gs://bucket/claims-data.csv', skip_header_lines=1)
             | 'ParseCSV' >> beam.Map(lambda line: dict(zip(['ClaimID', 'VehicleID', 'ClaimDate', 'CasualCode', 'CustomerComplaint', 'TechnicianDiagnosis', 'RepairRecommendation'], line.split(','))))
             | 'ProcessClaims' >> beam.ParDo(ProcessClaims(bert_model_name='bert-base-uncased'))
-            | 'PredictCostAndStatus' >> beam.ParDo(PredictCostAndStatus(project='your_project_id', model_name='your_model_name', version_name='your_version_name'))
+            | 'PredictCostAndStatus' >> beam.ParDo(PredictCostAndStatus(project='my-gcp-project', model_name='claims_prediction_model', version_name='v1'))
             | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
-                'your_project_id:your_dataset.your_table',
+                'project_id:my_dataset.final_predictions',
                 schema='ClaimID:STRING,VehicleID:STRING,ClaimDate:STRING,CasualCode:STRING,CustomerComplaint:STRING,TechnicianDiagnosis:STRING,RepairRecommendation:STRING,PartCosts:FLOAT64,LaborHours:FLOAT64,ClaimStatus:STRING',
                 write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND
             )
