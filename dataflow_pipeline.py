@@ -1,3 +1,5 @@
+# This Cloud Function is triggered by a Cloud Storage event (e.g., file upload) and starts a Dataflow job using the template created above.
+
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
 from google.cloud import storage, bigquery
@@ -25,7 +27,7 @@ class ProcessClaims(beam.DoFn):
         text_fields = ['CustomerComplaint', 'TechnicianDiagnosis', 'RepairRecommendation']
         embeddings = []
         for field in text_fields:
-            inputs = self.tokenizer(element[field], return_tensors='pt', truncation=True, padding=True, max_length=512)
+            inputs = self.tokenizer(element[field], return_tensors='pt', truncation=True, padding=True, max_length=128)
             outputs = self.model(**inputs)
             embedding = outputs.last_hidden_state.mean(dim=1).detach().numpy().flatten()
             embeddings.append(embedding)
@@ -35,9 +37,9 @@ class ProcessClaims(beam.DoFn):
         return [combined_features]
 
 
-class PredictCostAndApproval(beam.DoFn):
+class PredictCostAndStatus(beam.DoFn):
     def __init__(self, project, model_name, version_name):
-        super(PredictCostAndApproval, self).__init__()
+        super(PredictCostAndStatus, self).__init__()
         self.project = project
         self.model_name = model_name
         self.version_name = version_name
@@ -55,12 +57,12 @@ class PredictCostAndApproval(beam.DoFn):
         # Extract predictions
         part_costs = response['predictions'][0]['part_costs']
         labor_hours = response['predictions'][0]['labor_hours']
-        approval = response['predictions'][0]['approval']
+        claim_status = response['predictions'][0]['claim_status']
 
         # Append predictions to the element
         element['PartCosts'] = part_costs
         element['LaborHours'] = labor_hours
-        element['Approval'] = approval
+        element['ClaimStatus'] = claim_status
         return [element]
 
 def run(argv=None):
@@ -68,13 +70,13 @@ def run(argv=None):
     with beam.Pipeline(options=pipeline_options) as p:
         (
             p
-            | 'ReadClaimData' >> beam.io.ReadFromText('gs://your-bucket-name/claims-data.csv', skip_header_lines=1)
+            | 'ReadClaimData' >> beam.io.ReadFromText('gs://bucket/claims-data.csv', skip_header_lines=1)
             | 'ParseCSV' >> beam.Map(lambda line: dict(zip(['ClaimID', 'VehicleID', 'ClaimDate', 'CasualCode', 'CustomerComplaint', 'TechnicianDiagnosis', 'RepairRecommendation'], line.split(','))))
             | 'ProcessClaims' >> beam.ParDo(ProcessClaims(bert_model_name='bert-base-uncased'))
-            | 'PredictCostAndApproval' >> beam.ParDo(PredictCostAndApproval(project='your_project_id', model_name='your_model_name', version_name='your_version_name'))
+            | 'PredictCostAndStatus' >> beam.ParDo(PredictCostAndStatus(project='your_project_id', model_name='your_model_name', version_name='your_version_name'))
             | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
                 'your_project_id:your_dataset.your_table',
-                schema='ClaimID:STRING,VehicleID:STRING,ClaimDate:STRING,CasualCode:STRING,CustomerComplaint:STRING,TechnicianDiagnosis:STRING,RepairRecommendation:STRING,PartCosts:FLOAT64,LaborHours:FLOAT64,Approval:STRING',
+                schema='ClaimID:STRING,VehicleID:STRING,ClaimDate:STRING,CasualCode:STRING,CustomerComplaint:STRING,TechnicianDiagnosis:STRING,RepairRecommendation:STRING,PartCosts:FLOAT64,LaborHours:FLOAT64,ClaimStatus:STRING',
                 write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND
             )
         )
