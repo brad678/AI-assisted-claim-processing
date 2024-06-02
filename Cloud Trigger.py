@@ -1,3 +1,6 @@
+
+# This Cloud Function is triggered by a Cloud Storage event (e.g., file upload) and starts a Dataflow job using the template gs://my-dataflow-templates/claims_processing
+
 import google.auth
 from googleapiclient.discovery import build
 
