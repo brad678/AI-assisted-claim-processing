@@ -1,3 +1,8 @@
+# This will deploy the triggerDataflow Cloud Function using Python 3.9 runtime. 
+# The function will be triggered by the google.storage.object.finalize event on the claims-data-bucket, 
+# meaning the function will execute whenever a new file is uploaded and finalized in this bucket.
+
+
 gcloud functions deploy triggerDataflow \
     --runtime python39 \
     --trigger-resource claims-data-bucket \
