@@ -65,14 +65,62 @@ class PredictCostAndStatus(beam.DoFn):
         element['ClaimStatus'] = claim_status
         return [element]
 
+def merge_data(claim_data, vehicle_data, repair_data):
+    """Merges data from three PCollections based on common keys."""
+    # Convert dates to datetime
+    claim_data['ClaimDate'] = pd.to_datetime(claim_data['ClaimDate'])
+    vehicle_data['ManufacturingDate'] = pd.to_datetime(vehicle_data['ManufacturingDate'])
+    
+    # Merge data with vehicle_data to get VehicleType and ManufacturingDate
+    claim_data = claim_data.merge(vehicle_data, on='VehicleID', how='left')
+    
+    # Calculate VehicleAge
+    claim_data['VehicleAge'] = (claim_data['ClaimDate'] - claim_data['ManufacturingDate']).dt.days / 365
+    
+    # Merge data with repair_data to get RepairCategory
+    claim_data = claim_data.merge(repair_data, on='CasualCode', how='left')
+    
+    # Calculate time since last claim for the same vehicle
+    claim_data = claim_data.sort_values(by=['VehicleID', 'ClaimDate'])
+    claim_data['TimeSinceLastClaim'] = claim_data.groupby('VehicleID')['ClaimDate'].diff().dt.days
+    
+    # Calculate ClaimFrequency for each vehicle up to the current claim date
+    claim_data['ClaimFrequency'] = claim_data.groupby('VehicleID').cumcount() + 1
+
 def run(argv=None):
     pipeline_options = PipelineOptions(argv)
     with beam.Pipeline(options=pipeline_options) as p:
-        (
+        # Read claim data
+        claim_data = (
             p
             | 'ReadClaimData' >> beam.io.ReadFromText('gs://claims_data_bucket/new_claim_data.csv', skip_header_lines=1)
-            | 'ParseCSV' >> beam.Map(lambda line: dict(zip(['ClaimID', 'VehicleID', 'ClaimDate', 'CasualCode', 'CustomerComplaint', 'TechnicianDiagnosis', 'RepairRecommendation'], line.split(','))))
-            | 'ProcessClaims' >> beam.ParDo(ProcessClaims(bert_model_name='bert-base-uncased'))
+            | 'ParseClaimCSV' >> beam.Map(lambda line: dict(zip(['ClaimID', 'VehicleID', 'ClaimDate', 'CasualCode', 'CasualIssue', 'CustomerComplaint', 'TechnicianDiagnosis', 'RepairRecommendation'], line.split(','))))
+        )
+
+        # Read vehicle data
+        vehicle_data = (
+            p
+            | 'ReadVehicleData' >> beam.io.ReadFromText('gs://claims_data_bucket/vehicle_data.csv', skip_header_lines=1)
+            | 'ParseVehicleCSV' >> beam.Map(lambda line: dict(zip(['VehicleID', 'ManufacturingDate', 'VehicleType'], line.split(','))))
+        )
+
+        # Read customer data
+        repair_data = (
+            p
+            | 'ReadCustomerData' >> beam.io.ReadFromText('gs://claims_data_bucket/repair_data.csv', skip_header_lines=1)
+            | 'ParseCustomerCSV' >> beam.Map(lambda line: dict(zip(['CasualCode', 'RepairCategory'], line.split(','))))
+        )
+
+        # Merge data from all three PCollections
+        merged_data = (
+            p
+            | 'MergeData' >> beam.Create([claim_data, vehicle_data, repair_data])
+            | 'ApplyMergeFunction' >> beam.FlatMap(merge_data)
+        )
+
+        # Process claims
+        (
+            merged_data
             | 'PredictCostAndStatus' >> beam.ParDo(PredictCostAndStatus(project='my-gcp-project', model_name='claims_prediction_model', version_name='v1'))
             | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
                 'my-gcp-project:claims_output_data_bucket.processed_claims',
