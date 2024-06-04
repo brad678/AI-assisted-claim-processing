@@ -6,12 +6,51 @@ import torch
 # Load structured data
 data = pd.read_csv('historical_claims.csv')
 
-# Example structured features
-structured_features = data[['PartCosts', 'LaborHours', 'VehicleAge']]
+import pandas as pd
+from datetime import datetime
 
-# Normalize structured features
-scaler = StandardScaler()
-normalized_structured_features = scaler.fit_transform(structured_features)
+# Example DataFrames
+
+vehicles_data = {
+    'VehicleID': ['V1', 'V2', 'V3'],
+    'ManufacturingDate': ['2018-01-01', '2019-06-15', '2020-11-10'],
+    'VehicleType': ['Sedan', 'SUV', 'Truck']
+}
+
+repair_category_data = {
+    'CasualCode': ['E01', 'M02', 'B03'],
+    'RepairCategory': ['Engine', 'Mechanical', 'Battery']
+}
+
+# Create DataFrames
+vehicles_df = pd.DataFrame(vehicles_data)
+repair_category_df = pd.DataFrame(repair_category_data)
+
+# Convert dates to datetime
+data['ClaimDate'] = pd.to_datetime(data['ClaimDate'])
+vehicles_df['ManufacturingDate'] = pd.to_datetime(vehicles_df['ManufacturingDate'])
+
+# Merge data with vehicles_df to get VehicleType and ManufacturingDate
+data = data.merge(vehicles_df, on='VehicleID', how='left')
+
+# Calculate VehicleAge
+data['VehicleAge'] = (data['ClaimDate'] - data['ManufacturingDate']).dt.days / 365
+
+# Merge data with repair_category_df to get RepairCategory
+data = data.merge(repair_category_df, on='CasualCode', how='left')
+
+# Calculate time since last claim for the same vehicle
+data = data.sort_values(by=['VehicleID', 'ClaimDate'])
+data['TimeSinceLastClaim'] = data.groupby('VehicleID')['ClaimDate'].diff().dt.days
+
+# Calculate ClaimFrequency for each vehicle up to the current claim date
+data['ClaimFrequency'] = data.groupby('VehicleID').cumcount() + 1
+
+# Example output
+print(data)
+
+structured_features = data[['VehicleAge', 'VehicleType', 'RepairCategory', 
+                            'TimeSinceLastClaim', 'ClaimFrequency', 'CasualIssue']]
 
 # Example text data
 customer_complaints = data['CustomerComplaint']
@@ -52,7 +91,7 @@ def get_sentiment_scores(texts):
 customer_complaint_sentiments = get_sentiment_scores(customer_complaints)
 
 # Combine all features
-features = torch.cat((normalized_structured_features, 
+features = torch.cat((structured_features, 
                       customer_complaint_embeddings, 
                       technician_diagnosis_embeddings, 
                       repair_recommendations_embeddings, 
